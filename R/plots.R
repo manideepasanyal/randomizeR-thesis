@@ -5,17 +5,9 @@ library(purrr)
 
 theme_set(theme_bw(base_size = 12))
 
-# --------------------------------------------------
-# Helper
-# --------------------------------------------------
-
 parse_ratio <- function(r) {
   as.numeric(strsplit(r, ":", fixed = TRUE)[[1]])
 }
-
-# --------------------------------------------------
-# 1. Imbalance across designs and ratios
-# --------------------------------------------------
 
 plot_imbalance_across_designs <- function(results) {
   
@@ -41,9 +33,7 @@ plot_imbalance_across_designs <- function(results) {
     )
 }
 
-# --------------------------------------------------
 # 2. Overall performance G
-# --------------------------------------------------
 
 plot_G_across_designs <- function(results, chosen_param = 2) {
   
@@ -76,9 +66,8 @@ plot_G_across_designs <- function(results, chosen_param = 2) {
     )
 }
 
-# --------------------------------------------------
+
 # 3. UI vs UR trade-off
-# --------------------------------------------------
 
 plot_ui_ur_tradeoff <- function(results, ratio0 = "37:21:21:21", Nsim0 = 100) {
   
@@ -125,9 +114,9 @@ plot_ui_ur_tradeoff <- function(results, ratio0 = "37:21:21:21", Nsim0 = 100) {
     )
 }
 
-# --------------------------------------------------
+
 # 4. BSD ARP plot
-# --------------------------------------------------
+
 
 plot_bsd_arp <- function(
     K = 3,
@@ -204,9 +193,9 @@ plot_bsd_arp <- function(
     )
 }
 
-# --------------------------------------------------
+
 # 5. Imbalance over time
-# --------------------------------------------------
+
 
 plot_imbalance_over_time <- function(
     assignments_df,
@@ -301,9 +290,9 @@ plot_imbalance_over_time <- function(
     )
 }
 
-# --------------------------------------------------
+
 # 6. AFI curves
-# --------------------------------------------------
+
 
 plot_afi_curves <- function(
     ratio_vec = c(4, 3, 2, 1),
