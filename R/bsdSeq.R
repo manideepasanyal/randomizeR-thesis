@@ -30,7 +30,7 @@ setMethod("getProb", signature = c(obj = "bsdSeq"),
             K    <- obj@K
             N    <- obj@N
             rho  <- obj@ratio / sum(obj@ratio)
-            MTI  <- mti(obj)
+            MTI  <- obj@mti
             
             # Map 0/1 to 1/2 for K=2 if needed (back-compat with binary sequences)
             map01 <- function(x) if (K == 2 && all(x %in% c(0, 1))) x + 1 else x
@@ -132,28 +132,32 @@ methods::setMethod("getProbMatrix", signature = "rBsdSeq", function(obj) {
   N    <- obj@N
   rho  <- obj@ratio / sum(obj@ratio)
   MTI  <- obj@mti
+  r    <- nrow(M)
   
-  P <- matrix(NA_real_, nrow = K, ncol = N)
+  P_avg <- matrix(0, nrow = K, ncol = N)
   
-  alloc <- rep(0L, K)
-  
-  for (m in seq_len(N)) {
-    expected <- rho * (m - 1)
-    diff <- alloc - expected
+  for (sim in seq_len(r)) {
+    alloc <- rep(0L, K)
     
-    if (max(abs(diff)) < MTI) {
-      P[, m] <- rho
-    } else {
-      under <- which(diff == min(diff))
-      p <- rep(0, K)
-      p[under] <- 1 / length(under)
-      P[, m] <- p
+    for (m in seq_len(N)) {
+      expected <- rho * (m - 1)
+      diff <- alloc - expected
+      
+      if (max(abs(diff)) < MTI) {
+        p <- rho
+      } else {
+        under <- which(diff == min(diff))
+        p <- rep(0, K)
+        p[under] <- 1 / length(under)
+      }
+      
+      P_avg[, m] <- P_avg[, m] + p
+      
+      chosen <- as.integer(M[sim, m])
+      alloc[chosen] <- alloc[chosen] + 1L
     }
-    
-    chosen <- as.integer(M[1, m])
-    alloc[chosen] <- alloc[chosen] + 1L
   }
   
-  P
+  P_avg / r
 })
 

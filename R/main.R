@@ -5,7 +5,7 @@ library(dplyr)
 library(ggplot2)
 source("R/generics.R")
 
-## ---- 1) Source core + designs (order matters) 
+## ---- 1) Source core + designs (order matters)
 source("R/randPar.R")
 source("R/randSeq.R")
 
@@ -25,8 +25,8 @@ source("R/plots.R")
 
 
 
-## ---- 2) Fixed parameters 
-N      <- 100
+## ---- 2) Fixed parameters
+N      <- 200
 Nsim   <- c(10,100,500)
 ratios <- list(c(1,1,1,1), c(2,1,1,2), c(4,3,2,1), c(37,21,21,21))
 mwud_alphas <- c(2,6,8)
@@ -35,13 +35,13 @@ bsd_mtis    <- c(2,4,6)
 maxent_etas <- c(1)
 store_assignments  <- TRUE
 store_ratio_string <- "4:3:2:1"
-store_Nsim         <- 10
+store_Nsim         <- 100
 store_tuning       <- 6
 store_designs      <- c("BSD", "MWUD", "DLUD")
 
 set.seed(123)
 
-## ---- 3) Helpers 
+## ---- 3) Helpers
 safe_metric <- function(out, key) {
   if (!is.null(out) && !is.null(out[[key]]) && length(out[[key]]) == 1) out[[key]] else NA_real_
 }
@@ -51,7 +51,7 @@ safe_metric <- function(out, key) {
 seq_to_eval_list <- function(seq_obj, groups) {
   trt_num <- as.integer(seq_obj@M[1, ])  # one sequence (r=1)
   trt_fac <- factor(trt_num, levels = seq_along(groups), labels = groups)
-  
+
   P_kn <- getProbMatrix(seq_obj)         # K x N
   list(
     assignments   = data.frame(treatment = trt_fac),
@@ -60,17 +60,17 @@ seq_to_eval_list <- function(seq_obj, groups) {
 }
 append_assignments <- function(assignments_all, aix, out, design, ratio, Ns, tuning) {
   ratio_string <- paste(ratio, collapse = ":")
-  
+
   keep_this <- store_assignments &&
     ratio_string == store_ratio_string &&
     Ns == store_Nsim &&
     tuning == store_tuning &&
     design %in% store_designs
-  
+
   if (!keep_this || is.null(out$Assignments)) {
     return(list(assignments_all = assignments_all, aix = aix))
   }
-  
+
   tmp <- out$Assignments %>%
     mutate(
       Design      = design,
@@ -78,14 +78,14 @@ append_assignments <- function(assignments_all, aix, out, design, ratio, Ns, tun
       Nsim        = Ns,
       TuningParam = tuning
     )
-  
+
   if ("Simulation" %in% names(tmp)) {
     tmp <- tmp %>% rename(simulation = Simulation)
   }
-  
+
   assignments_all[[aix]] <- tmp
   aix <- aix + 1L
-  
+
   list(assignments_all = assignments_all, aix = aix)
 }
 ## ---- 4) Wrapper factories (friend-style: pass function + params to evaluator)
@@ -133,18 +133,18 @@ afi_steps <- data.frame()
 ## ---- storage for selected assignment-level allocations
 assignments_all <- list()
 aix <- 1L
-## ---- 5) Main run loop -> results dataframe 
+## ---- 5) Main run loop -> results dataframe
 results <- data.frame()
 for (ratio in ratios) {
-  
+
   K      <- length(ratio)
   groups <- LETTERS[1:K]
-  
+
   # params object passed into evaluate_assignments
   params <- list(N = N, K = K, ratio = ratio, groups = groups)
   for (Ns in Nsim) {
-    
-    ## ---- CRD 
+
+    ## ---- CRD
     out <- evaluate_assignments(
       allocation_function = crd_wrapper,
       params = params,
@@ -154,23 +154,23 @@ for (ratio in ratios) {
       method = "crd",
       plot   = FALSE
     )
-    
+
     results <- rbind(results, data.frame(
       Design      = "CRD",
       Ratio       = paste(ratio, collapse=":"),
       Nsim        = Ns,
       TuningParam = NA_real_,
       Imbalance   = safe_metric(out, "Imbalance"),
-      MPM         = safe_metric(out, "MPM"),      
-      
+      MPM         = safe_metric(out, "MPM"),
+
       FI_n        = safe_metric(out, "FI_n"),
       AFI         = safe_metric(out, "AFI"),
       UI          = safe_metric(out, "UI"),
       UR          = safe_metric(out, "UR"),
       G           = safe_metric(out, "G")
     ))
-    
-    ## ---- MaxEnt (eta grid) 
+
+    ## ---- MaxEnt (eta grid)
     for (eta in maxent_etas) {
       out <- evaluate_assignments(
         allocation_function = maxent_wrapper_factory(eta),
@@ -181,15 +181,15 @@ for (ratio in ratios) {
         method = "maxent",
         plot   = FALSE
       )
-      
+
       results <- rbind(results, data.frame(
         Design      = "MaxEnt",
         Ratio       = paste(ratio, collapse=":"),
         Nsim        = Ns,
         TuningParam = eta,
         Imbalance   = safe_metric(out, "Imbalance"),
-        MPM         = safe_metric(out, "MPM"),      
-        
+        MPM         = safe_metric(out, "MPM"),
+
         FI_n        = safe_metric(out, "FI_n"),
         AFI         = safe_metric(out, "AFI"),
         UI          = safe_metric(out, "UI"),
@@ -197,8 +197,8 @@ for (ratio in ratios) {
         G           = safe_metric(out, "G")
       ))
     }
-    
-    ## ---- MWUD (alpha grid) 
+
+    ## ---- MWUD (alpha grid)
     for (alpha in mwud_alphas) {
       out <- evaluate_assignments(
         allocation_function = mwud_wrapper_factory(alpha),
@@ -218,17 +218,17 @@ for (ratio in ratios) {
         Nsim        = Ns,
         TuningParam = alpha,
         Imbalance   = safe_metric(out, "Imbalance"),
-        MPM         = safe_metric(out, "MPM"),      
+        MPM         = safe_metric(out, "MPM"),
         FI_n        = safe_metric(out, "FI_n"),
         AFI         = safe_metric(out, "AFI"),
         UI          = safe_metric(out, "UI"),
         UR          = safe_metric(out, "UR"),
         G           = safe_metric(out, "G")
       ))
-      
+
     }
-    
-    ## ---- DLUD (a grid) 
+
+    ## ---- DLUD (a grid)
     for (a in dlud_as) {
       out <- evaluate_assignments(
         allocation_function = dlud_wrapper_factory(a),
@@ -242,24 +242,24 @@ for (ratio in ratios) {
       tmp_assign <- append_assignments(assignments_all, aix, out, "DLUD", ratio, Ns, a)
       assignments_all <- tmp_assign$assignments_all
       aix <- tmp_assign$aix
-      
+
       results <- rbind(results, data.frame(
         Design      = "DLUD",
         Ratio       = paste(ratio, collapse=":"),
         Nsim        = Ns,
         TuningParam = a,
         Imbalance   = safe_metric(out, "Imbalance"),
-        MPM         = safe_metric(out, "MPM"),      
-        
+        MPM         = safe_metric(out, "MPM"),
+
         FI_n        = safe_metric(out, "FI_n"),
         AFI         = safe_metric(out, "AFI"),
         UI          = safe_metric(out, "UI"),
         UR          = safe_metric(out, "UR"),
         G           = safe_metric(out, "G")
       ))
-      
-      
-      
+
+
+
     }
     ## ---- BSD (mti grid)
     for (mti in bsd_mtis) {
@@ -281,41 +281,41 @@ for (ratio in ratios) {
         Nsim        = Ns,
         TuningParam = mti,
         Imbalance   = safe_metric(out, "Imbalance"),
-        MPM         = safe_metric(out, "MPM"),      
-        
+        MPM         = safe_metric(out, "MPM"),
+
         FI_n        = safe_metric(out, "FI_n"),
         AFI         = safe_metric(out, "AFI"),
         UI          = safe_metric(out, "UI"),
         UR          = safe_metric(out, "UR"),
         G           = safe_metric(out, "G")
       ))
-      
-      
+
+
     }
-    
+
   }
-  
-  
-  
+
+
+
 }
 
 
 print(results)
 
 write.csv(results,
-          file = "CRD_MaxEnt_MWUD_DLUD_BSD_results.csv",
+          file = "R/CRD_MaxEnt_MWUD_DLUD_BSD_results.csv",
           row.names = FALSE)
 
 
 if (length(assignments_all) > 0) {
   assignments_long_all <- dplyr::bind_rows(assignments_all)
-  
+
   write.csv(
     assignments_long_all,
-    file = "assignments_long_all.csv",
+    file = "R/assignments_long_all.csv",
     row.names = FALSE
   )
-  
+
   cat("Saved assignments_long_all.csv with", nrow(assignments_long_all), "rows.\n")
   print(head(assignments_long_all))
 } else {
@@ -363,18 +363,11 @@ print(p_bsd_arp)
 p_imb_time <- plot_imbalance_over_time(
   assignments_df,
   ratio0 = "4:3:2:1",
-  Nsim0 = 10,
+  Nsim0 = 100,
   tuning0 = 6
 )
 print(p_imb_time)
 
-ggsave(
-  "plot_imbalance_over_time.png",
-  p_imb_time,
-  width = 11,
-  height = 7,
-  dpi = 300
-)
 
 p_afi <- plot_afi_curves(
   ratio_vec = c(4, 3, 2, 1),

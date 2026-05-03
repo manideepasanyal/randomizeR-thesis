@@ -3,12 +3,39 @@ NULL
 
 validatebsdPar <- function(object) {
   errors <- character()
+  
   mti <- object@mti
-  if (length(mti) != 1L) errors <- c(errors, sprintf("mti has length %d. Should 
-                                                be length one.", length(mti)))
-  if (round(mti[1]) != mti) errors <- c(errors, sprintf("First element of mti 
-                                          is %s. Should be an integer.", mti))
-  if (mti[1] < 0) errors <- c(errors, "mti must be a non-negative integer")
+  
+  if (length(mti) != 1L) {
+    errors <- c(errors, sprintf(
+      "mti has length %d. Should be length one.",
+      length(mti)
+    ))
+  }
+  
+  if (length(mti) == 1L && round(mti[1]) != mti[1]) {
+    errors <- c(errors, sprintf(
+      "mti is %s. Should be an integer.",
+      mti[1]
+    ))
+  }
+  
+  if (length(mti) == 1L && mti[1] < 0) {
+    errors <- c(errors, "mti must be a non-negative integer.")
+  }
+  
+  if (length(object@ratio) != object@K) {
+    errors <- c(errors, "Length of 'ratio' must match K.")
+  }
+  
+  if (any(object@ratio <= 0)) {
+    errors <- c(errors, "ratio must contain positive allocation weights.")
+  }
+  
+  if (length(object@groups) != object@K) {
+    errors <- c(errors, "Length of 'groups' must match K.")
+  }
+  
   if (length(errors) == 0) TRUE else errors
 }
 

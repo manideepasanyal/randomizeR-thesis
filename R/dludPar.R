@@ -6,26 +6,34 @@ NULL
 
 validateDludPar <- function(object) {
   errors <- character()
-  
-  if (length(object@immigration_rate) != 1 || object@immigration_rate <= 0) {
-    errors <- c(errors, "immigration_rate must be a single positive number.")
+
+  if (length(object@immigration_rate) != 1 ||
+      object@immigration_rate <= 0 ||
+      object@immigration_rate != as.integer(object@immigration_rate)) {
+    errors <- c(errors, "immigration_rate must be a single positive integer.")
   }
-  
-  if (length(object@init_seed) != 1 || object@init_seed < 0) {
+
+  if (length(object@init_seed) != 1 ||
+      object@init_seed < 0 ||
+      object@init_seed != as.integer(object@init_seed)) {
     errors <- c(errors, "init_seed must be a non-negative integer.")
   }
-  
+
   if (length(object@ratio) != object@K) {
     errors <- c(errors, "Length of 'ratio' must match K.")
   }
-  
+
+  if (any(object@ratio <= 0) ||
+      any(object@ratio != as.integer(object@ratio))) {
+    errors <- c(errors, "ratio must contain positive integer allocation weights.")
+  }
+
   if (length(object@groups) != object@K) {
     errors <- c(errors, "Length of 'groups' must match K.")
   }
-  
+
   if (length(errors) == 0) TRUE else errors
 }
-
 
 # dludPar class
 
@@ -67,7 +75,7 @@ dludRand <- function(N, K, w, immigration_rate, init_seed = 0L, stochastic_round
     }
   }
   c0 <- 1L
-  c  <- rep(add_int(init_seed), K)
+  c <- vapply(init_seed*w, add_int, integer(1))
   trt <- integer(N)
   P <- matrix(NA_real_, nrow = K, ncol = N)
   for (i in seq_len(N)) {
@@ -98,48 +106,48 @@ dludRand <- function(N, K, w, immigration_rate, init_seed = 0L, stochastic_round
 setMethod("genSeq", signature(obj = "dludPar", r = "numeric", seed = "numeric"),
           function(obj, r, seed) {
             set.seed(seed)
-            
+
             sims <- lapply(seq_len(r), function(x) {
               dludRand(obj@N, obj@K, obj@ratio,
                        obj@immigration_rate, obj@init_seed, obj@stochastic_round)
             })
-            
+
             simMatrix <- t(sapply(sims, `[[`, "trt"))
                         if (r == 1) {
               Pstore <- sims[[1]]$P
             } else {
               Pstore <- Reduce(`+`, lapply(sims, `[[`, "P")) / r
             }
-            
+
             new("rDludSeq", M = simMatrix, N = obj@N, K = obj@K,
                 ratio = obj@ratio, groups = obj@groups,
                 immigration_rate = obj@immigration_rate,
                 init_seed = obj@init_seed,
                 stochastic_round = obj@stochastic_round,
-                probMatrix = Pstore,     
+                probMatrix = Pstore,
                 seed = seed)
           })
 
 
 setMethod("genSeq", signature(obj = "dludPar", r = "numeric", seed = "missing"),
           function(obj, r) {
-            
+
             seed <- sample(.Machine$integer.max, 1)
             set.seed(seed)
-            
+
             sims <- lapply(seq_len(r), function(x) {
               dludRand(obj@N, obj@K, obj@ratio,
                        obj@immigration_rate, obj@init_seed, obj@stochastic_round)
             })
-            
+
             simMatrix <- t(sapply(sims, `[[`, "trt"))  # r x N
-            
+
             if (r == 1) {
               Pstore <- sims[[1]]$P
             } else {
               Pstore <- Reduce(`+`, lapply(sims, `[[`, "P")) / r
             }
-            
+
             new("rDludSeq",
                 M = simMatrix, N = obj@N, K = obj@K,
                 ratio = obj@ratio, groups = obj@groups,

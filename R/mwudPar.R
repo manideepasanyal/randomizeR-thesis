@@ -5,28 +5,26 @@ NULL
 # Validation function for mwudPar
 validateMwudPar <- function(object) {
   errors <- character()
-  
-  if (length(object@alpha) != 1 || object@alpha <= 0) {
-    errors <- c(errors, "alpha must be a single positive number.")
+
+  if (length(object@alpha) != 1 || object@alpha <= 0 || object@alpha != as.integer(object@alpha)) {
+    errors <- c(errors, "alpha must be a single positive integer.")
   }
-  
+
   if (length(object@ratio) != object@K) {
     errors <- c(errors, "Length of 'ratio' must match 'K'.")
   }
-  
+
   if (length(object@groups) != object@K) {
     errors <- c(errors, "Length of 'groups' must match 'K'.")
   }
-  
+
   if (length(errors) == 0) TRUE else errors
 }
 
-# --------------------------------------------
 # mwudPar class
-# --------------------------------------------
 #' @rdname mwudPar-class
 #' @export
-#' 
+#'
 setClass("mwudPar",
          slots = c(N = "numeric", K = "numeric", ratio = "numeric", groups = "character", alpha = "numeric"),
          validity = validateMwudPar)
@@ -51,7 +49,7 @@ mwudRand <- function(N, K, ratio, alpha) {
   rho <- ratio / sum(ratio)
   trt <- integer(N)
   counts <- integer(K)
-  
+
   for (m in 1:N) {
     p <- pmax(alpha * rho - counts + sum(counts) * rho, 0)
     if (sum(p) <= 0) p <- rho else p <- p / sum(p)   # safety fallback
